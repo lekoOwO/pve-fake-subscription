@@ -27,14 +27,18 @@ jobs:
       - name: Build deb
         run: ./package.sh
 
+      - name: Get branch name
+        id: branch_name
+        run: echo ::set-output name=branch_name::${GITHUB_REF#refs/heads/}
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ steps.branch_name.outputs.branch_name }}
+          release_name: Release ${{ steps.branch_name.outputs.branch_name }}
           draft: false
           prerelease: true
 
