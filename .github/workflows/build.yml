@@ -27,14 +27,13 @@ jobs:
       - name: Build deb
         run: ./package.sh
 
-      - name: Find deb files
-        id: find_deb_files
-        run: |
-          echo "DEB_FILES=$(find . -name 'out/*.deb')" >> $GITHUB_ENV
+      - name: Set outputs
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.sha }}
+          tag_name: ${{ steps.vars.outputs.sha_short }}
           prerelease: true
           files: out/*.deb
