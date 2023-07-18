@@ -1,0 +1,12 @@
+- name: Build deb
+  on: 
+    push:
+      branches:
+        - "master"
+    pull_request:
+      branches: ["master"]
+  uses: skynet-core/nfpm@v1.5
+  id: deb-package
+  with:
+    config: "nfpm.yaml"
+    packager: "deb"
