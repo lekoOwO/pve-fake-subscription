@@ -1,12 +1,60 @@
-- name: Build deb
-  on: 
-    push:
-      branches:
-        - "master"
-    pull_request:
-      branches: ["master"]
-  uses: skynet-core/nfpm@v1.5
-  id: deb-package
-  with:
-    config: "nfpm.yaml"
-    packager: "deb"
+name: Build and Pre-release deb
+on:
+  push:
+    branches:
+      - "master"
+  pull_request:
+    branches:
+      - "master"
+  release:
+    types:
+      - created
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Build deb
+        id: deb-package
+        uses: skynet-core/nfpm@v1.5
+        with:
+          config: "nfpm.yaml"
+          packager: "deb"
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: true
+
+      - name: Find deb files
+        id: find_deb_files
+        run: |
+          echo "::set-output name=debFiles::$(find . -name '*.deb')"
+
+      - name: Upload deb artifacts
+        id: upload_deb
+        uses: actions/upload-artifact@v2
+        with:
+          name: deb-package
+          path: ${{ steps.find_deb_files.outputs.debFiles }}
+
+      - name: Attach deb to release
+        id: attach_deb
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.find_deb_files.outputs.debFiles }}
+          asset_name: deb-package.deb
+          asset_content_type: application/vnd.debian.binary-package
