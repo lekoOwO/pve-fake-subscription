@@ -27,40 +27,14 @@ jobs:
       - name: Build deb
         run: ./package.sh
 
-      - name: Get branch name
-        id: branch_name
-        run: echo ::set-output name=branch_name::${GITHUB_REF#refs/heads/}
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.branch_name.outputs.branch_name }}
-          release_name: Release ${{ steps.branch_name.outputs.branch_name }}
-          draft: false
-          prerelease: true
-
       - name: Find deb files
         id: find_deb_files
         run: |
-          echo "::set-output name=debFiles::$(find . -name 'out/*.deb')"
+          echo "DEB_FILES=$(find . -name 'out/*.deb')" >> $GITHUB_ENV
 
-      - name: Upload deb artifacts
+      - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ steps.find_deb_files.outputs.debFiles }}
-          tag_name: ${{ steps.branch_name.outputs.branch_name }}
-          body: ${{ steps.create_release.outputs.release_id }}
-
-      - name: Attach deb to release
-        id: attach_deb
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.find_deb_files.outputs.debFiles }}
-          asset_name: deb-package.deb
-          asset_content_type: application/vnd.debian.binary-package
+          tag_name: ${{ github.sha }}
+          prerelease: true
+          files: out/*.deb
