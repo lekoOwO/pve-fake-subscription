@@ -23,13 +23,9 @@ jobs:
           echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
           sudo apt update
           sudo apt install nfpm
-          
+
       - name: Build deb
         run: ./package.sh
-
-      - name: Get branch name
-        id: branch_name
-        run: echo ::set-output name=branch_name::${GITHUB_REF#refs/heads/}
 
       - name: Create Release
         id: create_release
@@ -37,22 +33,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.branch_name.outputs.branch_name }}
-          release_name: Release ${{ steps.branch_name.outputs.branch_name }}
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
           draft: false
           prerelease: true
+
+      - name: Get branch name
+        id: branch_name
+        run: |
+          echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
 
       - name: Find deb files
         id: find_deb_files
         run: |
-          echo "::set-output name=debFiles::$(find . -name 'out/*.deb')"
+          echo "DEB_FILES=$(find . -name 'out/*.deb')" >> $GITHUB_ENV
 
       - name: Upload deb artifacts
-        id: upload_deb
-        uses: actions/upload-artifact@v2
+        uses: softprops/action-gh-release@v1
         with:
-          name: deb-package
-          path: ${{ steps.find_deb_files.outputs.debFiles }}
+          files: ${{ env.DEB_FILES }}
+          tag_name: ${{ github.ref }}
+          body: ${{ steps.create_release.outputs.release_id }}
 
       - name: Attach deb to release
         id: attach_deb
@@ -61,6 +62,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.find_deb_files.outputs.debFiles }}
+          asset_path: ${{ env.DEB_FILES }}
           asset_name: deb-package.deb
           asset_content_type: application/vnd.debian.binary-package
